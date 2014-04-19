@@ -20,7 +20,6 @@ Gem::Specification.new do |s|
   s.executables = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   s.require_paths = ["lib"]
 
-  s.add_dependency "rails", "~> 3.2.17"
   s.add_dependency 'dynamic_form', "~> 1.1.4"
 
   s.add_development_dependency "sqlite3"
@@ -37,10 +36,10 @@ Gem::Specification.new do |s|
   s.add_development_dependency('database_cleaner', '~> 1.2.0')
   s.add_development_dependency 'debugger'
 
-  s.add_dependency 'surveyor', '~> 1.4.0'
+  s.add_dependency 'surveyor', '~> 1.4.1.pre'
   s.add_dependency 'will_paginate', '~> 3.0.5'
 
-  s.add_dependency 'simple_form', '~> 2.1.1'
+  s.add_dependency 'simple_form', '~> 3.0'
   s.add_dependency 'carrierwave', '~> 0.10.0'
   s.add_dependency 'colorbox-rails', '~> 0.1.1'
   s.add_dependency 'jquery-form-rails', '~> 1.0.1'
