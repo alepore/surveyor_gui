@@ -4,11 +4,11 @@ Rails.application.routes.draw do
   # first created -> highest priority.
 
   # Sample of regular route:
-  #   match 'products/:id' => 'catalog#view'
+  #   get 'products/:id' => 'catalog#view'
   # Keep in mind you can assign values other than :controller and :action
 
   # Sample of named route:
-  #   match 'products/:id/purchase' => 'catalog#purchase', :as => :purchase
+  #   get 'products/:id/purchase' => 'catalog#purchase', :as => :purchase
   # This route can be invoked with purchase_url(:id => product.id)
 
   # Sample resource route (maps HTTP verbs to controller actions automatically):
@@ -55,7 +55,7 @@ Rails.application.routes.draw do
 
   # This is a legacy wild controller route that's not recommended for RESTful applications.
   # Note: This route will make all actions in every controller accessible via GET requests.
-  # match ':controller(/:action(/:id))(.:format)'
+  # get ':controller(/:action(/:id))(.:format)'
   resources :surveyforms do
     member do
       get 'replace_form'
@@ -77,7 +77,7 @@ Rails.application.routes.draw do
     post :sort, :on => :collection
   end
 
-  match '/questions/sort',   :to => 'questions#sort'
+  get '/questions/sort',   :to => 'questions#sort'
 
   resources :questions do
     member do
@@ -85,8 +85,8 @@ Rails.application.routes.draw do
     end
   end
 
-  match '/question/render_answer_fields_partial', :to => 'questions#render_answer_fields_partial'
-  match '/question/render_no_picks_partial', :to => 'questions#render_no_picks_partial'
+  get '/question/render_answer_fields_partial', :to => 'questions#render_answer_fields_partial'
+  get '/question/render_no_picks_partial', :to => 'questions#render_no_picks_partial'
 
   resources :dependencys do
     collection do
@@ -94,7 +94,7 @@ Rails.application.routes.draw do
       get 'get_question_type'
     end
   end
-  match '/dependency/render_dependency_conditions_partial', :to => 'dependencys#render_dependency_conditions_partial'
+  get '/dependency/render_dependency_conditions_partial', :to => 'dependencys#render_dependency_conditions_partial'
 
   resources :surveyresponses,
     :only=>['preview_results',

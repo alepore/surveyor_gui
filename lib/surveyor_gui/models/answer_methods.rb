@@ -1,11 +1,11 @@
 module SurveyorGui
   module Models
     module AnswerMethods
+      extend ActiveSupport::Concern
 
-      def self.included(base)
-        base.send :belongs_to, :question
-        base.send :has_many, :responses
-        base.send :attr_accessible, :text, :response_class, :display_order, :original_choice, :hide_label, :question_id, :display_type
+      included do
+        belongs_to :question
+        has_many :responses
       end
 
       def split_or_hidden_text(part = nil)

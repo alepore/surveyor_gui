@@ -1,18 +1,16 @@
 module SurveyorGui
   module Models
     module SurveySectionMethods
+      extend ActiveSupport::Concern
 
-      def self.included(base)
+      included do
+        belongs_to :surveyform, :foreign_key=>:survey_id
+        has_many :questions, :dependent => :destroy
+        accepts_nested_attributes_for :questions
+        default_scope { order('display_order') }
 
-        base.send :attr_accessible, :title, :display_order,
-                        :questions_attributes, :survey_id, :modifiable
-        base.send :belongs_to, :surveyform, :foreign_key=>:survey_id
-        base.send :has_many, :questions, :dependent => :destroy
-        base.send :accepts_nested_attributes_for, :questions
-        base.send :default_scope, :order => 'display_order'
-
-        base.send :validate, :no_responses
-        base.send :before_destroy, :no_responses
+        validate :no_responses
+        before_destroy :no_responses
       end
 
       #don't let a survey be deleted or changed if responses have been submitted

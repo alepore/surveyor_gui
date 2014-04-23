@@ -1,28 +1,24 @@
 module SurveyorGui
   module Models
     module QuestionMethods
+      extend ActiveSupport::Concern
 
-      def self.included(base)
-        base.send :attr_accessor, :dummy_answer, :type, :decimals
-        base.send :attr_accessible, :dummy_answer, :question_type, :survey_section_id, :question_group,
-                  :text, :pick, :reference_identifier, :display_order, :display_type,
-                  :is_mandatory,  :prefix, :suffix, :answers_attributes, :decimals, :dependency_attributes,
-                  :hide_label, :dummy_blob, :dynamically_generate,
-                  :dynamic_source, :modifiable, :report_code
-        base.send :accepts_nested_attributes_for, :answers, :reject_if => lambda { |a| a[:text].blank?}, :allow_destroy => true
-        base.send :belongs_to, :survey_section
-        base.send :has_many, :responses
-        base.send :has_many, :dependency_conditions, :through=>:dependency, :dependent => :destroy
-        base.send :default_scope, :order => 'display_order'
-        base.send :scope, :by_display_order, :order => 'display_order'
+      included do
+        attr_accessor :dummy_answer, :type, :decimals
+        accepts_nested_attributes_for :answers, :reject_if => lambda { |a| a[:text].blank?}, :allow_destroy => true
+        belongs_to :survey_section
+        has_many :responses
+        has_many :dependency_conditions, :through=>:dependency, :dependent => :destroy
+        default_scope { order('display_order') }
+        scope :by_display_order, order('display_order')
         ### everything below this point must be commented out to run the rake tasks.
-        base.send :accepts_nested_attributes_for, :dependency, :reject_if => lambda { |d| d[:rule].blank?}, :allow_destroy => true
-        base.send :mount_uploader, :dummy_blob, BlobUploader
+        accepts_nested_attributes_for :dependency, :reject_if => lambda { |d| d[:rule].blank?}, :allow_destroy => true
+        mount_uploader :dummy_blob, BlobUploader
 
-        base.send :validate, :no_responses
-        base.send :before_destroy, :no_responses
+        validate :no_responses
+        before_destroy :no_responses
 
-        base.class_eval do
+        class_eval do
 
           def answers_attributes=(ans)
             #don't set answer.text if question_type = number.  In this case, text should get set by the prefix and suffix setters.

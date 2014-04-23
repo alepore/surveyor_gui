@@ -3,7 +3,7 @@ class Surveyform < Survey
       if search
         where('title LIKE ?', "%#{search}%")
       else
-        scoped
+        all
       end
     end
 end

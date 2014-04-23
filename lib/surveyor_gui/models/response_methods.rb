@@ -1,20 +1,18 @@
 module SurveyorGui
   module Models
     module ResponseMethods
+      extend ActiveSupport::Concern
 
-      def self.included(base)
-        base.send :has_many, :answers, :primary_key => :answer_id, :foreign_key => :id
-        base.send :has_many, :questions
-        base.send :attr_accessible, :response_set, :question, :answer, :date_value, :time_value,
-            :response_set_id, :question_id, :answer_id, :datetime_value, :integer_value, :float_value,
-            :unit, :text_value, :string_value, :response_other, :response_group, :survey_section_id, :blob
+      included do
+        has_many :answers, :primary_key => :answer_id, :foreign_key => :id
+        has_many :questions
         #belongs_to :user
 
         # after_destroy :delete_blobs!
         # after_destroy :delete_empty_dir
 
         #extends response to allow file uploads.
-        base.send :mount_uploader, :blob, BlobUploader
+        mount_uploader :blob, BlobUploader
       end
 
       def response_value

@@ -34,7 +34,7 @@ module SurveyorGui
       @surveyform.response_sets.where('test_data=?',true).map{|r| r.destroy}
       if !@surveyform.template && @surveyform.response_sets.count>0
         @survey_locked=true
-        flash.now[:error] = "Reponses have already been collected for this survey, therefore modifications are not permitted."
+        flash.now[:error] = "Responses have already been collected for this survey, therefore modifications are not permitted."
       end
       @title = "Edit "+ (@surveyform.template ? 'Template' : 'Survey')
       @surveyform.survey_sections.build if @surveyform.survey_sections.blank?
@@ -43,7 +43,7 @@ module SurveyorGui
     end
 
     def create
-      @surveyform = Surveyform.new(params[:surveyform])
+      @surveyform = Surveyform.new(surveyforms_params)
       if @surveyform.save
         flash[:notice] = "Successfully created survey."
         @title = "Edit Survey"
@@ -70,8 +70,7 @@ module SurveyorGui
     def show
       @title = "Show Survey"
       @survey_locked=true
-      @surveyform = Surveyform.find(params[:id], :include =>:survey_sections)
-      @surveyform = Surveyform.where(:id=>params[:id]).includes(:survey_sections).first
+      @surveyform = Surveyform.find(params[:id])
       @question_no=0
     end
 
@@ -214,6 +213,11 @@ module SurveyorGui
       @question = Question.find(question_id)
       @question_no = 0
       render "_question_section" , :layout=> false
+    end
+
+    private
+    def surveyforms_params
+      params.require(:surveyform).permit(:title, :template, survey_sections_attributes: [:title, :display_order, :modifiable])
     end
 
   end

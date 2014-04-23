@@ -1,12 +1,11 @@
 module SurveyorGui
   module Models
     module DependencyConditionMethods
+      extend ActiveSupport::Concern
 
-      def self.included(base)
-        base.send :attr_accessible, :dependency_id, :rule_key, :question_id, :operator, :answer_id,
-                  :float_value, :integer_value, :join_operator
-        base.send :belongs_to, :dependency
-        base.send :default_scope, :order => 'rule_key'
+      included do
+        belongs_to :dependency
+        default_scope { order('rule_key') }
       end
 
       def join_operator

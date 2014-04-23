@@ -1,16 +1,16 @@
 module SurveyorGui
   module Models
     module SurveyMethods
-      def self.included(base)
-        base.extend Surveyor::Models::SurveyMethods
-        base.send :attr_accessible, :title, :access_code, :template,
-                        :survey_sections_attributes
-        base.send :has_many, :survey_sections, :dependent => :destroy
-        base.send :accepts_nested_attributes_for, :survey_sections, :allow_destroy => true
+      extend ActiveSupport::Concern
 
-        base.send :validate, :no_responses
-        base.send :before_destroy, :no_responses
+      included do
+        extend Surveyor::Models::SurveyMethods
 
+        has_many :survey_sections, :dependent => :destroy
+        accepts_nested_attributes_for :survey_sections, :allow_destroy => true
+
+        validate :no_responses
+        before_destroy :no_responses
       end
 
 
