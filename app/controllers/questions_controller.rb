@@ -24,7 +24,7 @@ class QuestionsController < ApplicationController
       params[:question][:answers_attributes]['0'][:original_choice] = params[:question][:answers_attributes]['0'][:text]
     end
 
-    @question = Question.new(params[:question])
+    @question = Question.new(question_params)
     if @question.save
       @question.answers.each_with_index {|a, index| a.destroy if index > 0} if @question.pick=='none'
       #load any page - if it has no flash errors, the colorbox that contains it will be closed immediately after the page loads
@@ -38,7 +38,7 @@ class QuestionsController < ApplicationController
   def update
     @title = "Update Question"
     @question = Question.includes(:answers).find(params[:id])
-    if @question.update_attributes(params[:question])
+    if @question.update_attributes(question_params)
       @question.answers.each_with_index {|a, index| a.destroy if index > 0} if @question.pick=='none'
       #load any page - if it has no flash errors, the colorbox that contains it will be closed immediately after the page loads
       render :blank, :layout=>'colorbox'
@@ -130,6 +130,11 @@ class QuestionsController < ApplicationController
       @questions.answers.build(:text=>'')
     end
     render :partial => 'no_picks'
+  end
+
+  private
+  def question_params
+    params.require(:question).permit(:survey_section_id, :display_order, :pick, :display_type, :modifiable, :text, :is_mandatory, :question_type, :dynamically_generate, :dynamic_source, answers_attributes: [:id, :text, :display_order, :_destroy, :report_code])
   end
 
 end
