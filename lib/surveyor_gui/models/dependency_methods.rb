@@ -13,7 +13,7 @@ module SurveyorGui
 #        # This means we do need to account for adding new records, and the validation has to be modified.  Unfortunately,
 #        # in Rails 3.2 there is no easy way to modify an existing validation.  We have to hack it out and replace it.
         class_eval do
-          _validators.reject!{ |key, _| key == :question_id }
+          _validators.reject{ |key, _| key == :question_id }
 
           _validate_callbacks.reject do |callback|
             if callback.raw_filter.class==ActiveModel::Validations::NumericalityValidator
