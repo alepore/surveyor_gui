@@ -24,16 +24,16 @@ Gem::Specification.new do |s|
 
   s.add_development_dependency "sqlite3"
 
-  s.add_development_dependency 'sass-rails', '~> 3.2.3'
-  s.add_development_dependency 'coffee-rails', '~> 3.2.1'
+  s.add_development_dependency 'sass-rails'#, '~> 3.2.3'
+  s.add_development_dependency 'coffee-rails'#, '~> 3.2.1'
   s.add_development_dependency 'uglifier', '>= 1.0.3'
-  s.add_development_dependency('rspec-rails', '~> 2.14.2')
+  s.add_development_dependency('rspec-rails')#, '~> 2.14.2')
   s.add_development_dependency('capybara', '~> 2.2.1')
   s.add_development_dependency('launchy', '~> 2.4.2')
   s.add_development_dependency('poltergeist', '~>1.5.0')
   s.add_development_dependency('capybara-webkit')
   s.add_development_dependency('json_spec', '~> 1.1.1')
-  s.add_development_dependency('factory_girl', '~> 4.4.0')
+  s.add_development_dependency('factory_girl')#, '~> 4.4.0')
   s.add_development_dependency('database_cleaner', '~> 1.2.0')
   s.add_development_dependency('rspec-retry')
   s.add_development_dependency 'debugger'
@@ -42,7 +42,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'will_paginate', '~> 3.0.5'
 
   s.add_dependency 'simple_form', '~> 3.0'
-  s.add_dependency 'carrierwave', '~> 0.10.0'
+  s.add_dependency 'carrierwave'#, '~> 0.10.0'
   s.add_dependency 'colorbox-rails', '~> 0.1.1'
   s.add_dependency 'jquery-form-rails', '~> 1.0.1'
 end
