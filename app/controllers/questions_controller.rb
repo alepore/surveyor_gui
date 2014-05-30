@@ -1,4 +1,5 @@
 class QuestionsController < ApplicationController
+  layout 'surveyor_gui_blank'
 
   def new
     @title = "Add Question"
@@ -19,7 +20,7 @@ class QuestionsController < ApplicationController
     @title = "Edit Question"
     @question = Question.includes(:answers).find(params[:id])
   end
-  
+
   def adjusted_text
     if @question.part_of_group?
       @question.question_group.text
@@ -27,7 +28,7 @@ class QuestionsController < ApplicationController
       @question.text
     end
   end
-  
+
   helper_method :adjusted_text
 
   def create
@@ -115,7 +116,7 @@ class QuestionsController < ApplicationController
     end
     render :partial => 'answer_fields'
   end
-  
+
   def render_grid_partial
     if params[:id].blank?
       @questions = Question.new
