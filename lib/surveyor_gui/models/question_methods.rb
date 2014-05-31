@@ -22,7 +22,7 @@ module SurveyorGui
         base.send :accepts_nested_attributes_for, :dependency, :reject_if => lambda { |d| d[:rule].blank?}, :allow_destroy => true
         base.send :mount_uploader, :dummy_blob, BlobUploader
         base.send :belongs_to, :question_type
-        
+
         base.send :validate, :no_responses
         base.send :before_destroy, :no_responses
         base.send :after_save, :build_complex_questions
@@ -63,21 +63,21 @@ module SurveyorGui
           #this will be a problem if two people are editing the survey at the same time and do a survey preview - highly unlikely though.
           self.survey_section.survey.response_sets.where('test_data = ?',true).each {|r| r.destroy}
         end
-        if self.id && !survey_section.survey.template && survey_section.survey.response_sets.count>0
-          errors.add(:base,"Reponses have already been collected for this survey, therefore it cannot be modified. Please create a new survey instead.")
-          return false
-        end
+        # if self.id && !survey_section.survey.template && survey_section.survey.response_sets.count>0
+        #   errors.add(:base,"Reponses have already been collected for this survey, therefore it cannot be modified. Please create a new survey instead.")
+        #   return false
+        # end
       end
 
       def question_type_id
         QuestionType.categorize_question(self)
       end
-      
+
 #      #generates descriptions for different types of questions, including those that use widgets
       def question_type
         @question_type = QuestionType.find(question_type_id)
       end
-#      
+#
 
       def dynamically_generate
         'false'
@@ -266,25 +266,25 @@ module SurveyorGui
       def answers_textbox
         self.answers.where('is_exclusive != ? and is_comment != ? and response_class != ?',true,true,"string").order('display_order asc').collect(&:text).join("\n")
       end
-      
+
       def omit
         @omit = self.answers.where('is_exclusive = ?',true).size > 0
       end
-      
+
       def omit_text
         answer = self.answers.where('is_exclusive = ?',true).first
         @omit_text = (answer ? answer.text : "none of the above")
       end
-      
+
       def other
         @other = self.answers.where('response_class = ? and is_exclusive = ? and is_comment = ?',"string",false, false).size > 0
       end
-      
+
       def other_text
         answer = self.answers.where('response_class = ? and is_exclusive = ? and is_comment = ?',"string", false, false).first
         @other_text = (answer ? answer.text : "Other")
       end
-      
+
       def comments
         if self.part_of_group?
           @comments = self.question_group.questions.where('is_comment=?',true).size > 0
@@ -292,7 +292,7 @@ module SurveyorGui
           @comments = self.answers.where('is_comment=?',true).size > 0
         end
       end
-            
+
       def comments_text
         if self.part_of_group?
           @comments_text = is_comment ? self.answers.first.text : "Comments"
@@ -301,11 +301,11 @@ module SurveyorGui
           @comments_text = (answer ? answer.text : "Comments")
         end
       end
-                  
+
       def grid_columns_textbox
         self.answers.where('response_class != ? and is_exclusive = ?',"string",false).order('display_order asc').collect(&:text).join("\n")
       end
-      
+
       def grid_rows_textbox
         if self.question_group && self.question_group.questions
           self.question_group.questions.where('is_comment=?',false).order('display_order asc').collect(&:text).join("\n")
@@ -313,36 +313,36 @@ module SurveyorGui
           nil
         end
       end
-      
+
       def text=(txt)
-        write_attribute(:text, txt) 
+        write_attribute(:text, txt)
         if part_of_group?
           question_group.update_attributes(text: txt)
         end
         @text = txt
       end
-      
+
       def grid_rows_textbox=(textbox)
         write_attribute(:text, textbox.match(/.*\r/).to_s.strip)
         @grid_rows_textbox = textbox.gsub(/\r/,"")
       end
-      
+
       def build_complex_questions
-        if @answers_textbox || @grid_columns_textbox || @grid_rows_textbox 
+        if @answers_textbox || @grid_columns_textbox || @grid_rows_textbox
           self.question_type.build_complex_question_structure(
-            self, 
-            answers_textbox:      @answers_textbox, 
+            self,
+            answers_textbox:      @answers_textbox,
             omit_text:            @omit_text,
             is_exclusive:         @omit=="1",
             other_text:           @other_text,
             other:                @other=="1",
             comments_text:        @comments_text,
             comments:             @comments=="1",
-            grid_columns_textbox: @grid_columns_textbox, 
+            grid_columns_textbox: @grid_columns_textbox,
             grid_rows_textbox:    @grid_rows_textbox)
         end
       end
-      
+
       def next_display_order
         if part_of_group?
           self.question_group.questions.last.display_order + 1
@@ -350,23 +350,23 @@ module SurveyorGui
           display_order + 1
         end
       end
- 
+
 
       private
-      
+
       def _update_group_id
-        @question_group = self.question_group || 
+        @question_group = self.question_group ||
           QuestionGroup.create!(text: @text, display_type: :grid)
         self.question_group_id = @question_group.id
       end
-      
+
       def _remove_group
         if part_of_group?
-          question_group.questions.map{|q| q.destroy if q.id != id} 
+          question_group.questions.map{|q| q.destroy if q.id != id}
           write_attribute(:question_group_id, nil)
         end
       end
-      
+
       def _preceding_questions_numbered
         _preceding_questions.delete_if{|p| !p.is_numbered?}
       end
@@ -380,7 +380,7 @@ module SurveyorGui
             survey_section.id,
             display_order
         )
-      end      
+      end
     end
   end
 end

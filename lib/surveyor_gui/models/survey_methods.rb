@@ -21,10 +21,10 @@ module SurveyorGui
           #this will be a problem if two people are editing the survey at the same time and do a survey preview - highly unlikely though.
           self.response_sets.where('test_data = ?',true).each {|r| r.destroy}
         end
-        if !template && response_sets.count>0
-          errors.add(:base,"Reponses have already been collected for this survey, therefore it cannot be modified. Please create a new survey instead.")
-          return false
-        end
+        # if !template && response_sets.count>0
+        #   errors.add(:base,"Reponses have already been collected for this survey, therefore it cannot be modified. Please create a new survey instead.")
+        #   return false
+        # end
       end
 
     end

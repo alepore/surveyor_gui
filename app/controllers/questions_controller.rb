@@ -64,10 +64,10 @@ class QuestionsController < ApplicationController
 
   def destroy
     question = Question.find(params[:id])
-    if !question.survey_section.survey.template && question.survey_section.survey.response_sets.count > 0
-      flash[:error]="Reponses have already been collected for this survey, therefore it cannot be modified. Please create a new survey instead."
-      return false
-    end
+    # if !question.survey_section.survey.template && question.survey_section.survey.response_sets.count > 0
+    #   flash[:error]="Reponses have already been collected for this survey, therefore it cannot be modified. Please create a new survey instead."
+    #   return false
+    # end
     if !question.dependency_conditions.blank?
       render :text=>"The following questions have logic that depend on this question: \n\n"+question.dependency_conditions.map{|d| " - "+d.dependency.question.text}.join('\n')+"\n\nPlease delete logic before deleting this question.".html_safe
       return
