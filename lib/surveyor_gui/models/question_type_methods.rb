@@ -62,7 +62,7 @@ module SurveyorGui
       end
       
       def _build_grid_dropdown(question, args)
-        _build_grid(question,args)     
+        _build_grid_dropdown(question,args)     
       end
       
       def _build_grid(question,args)
@@ -74,13 +74,36 @@ module SurveyorGui
         other_text            = args[:other_text].to_s
         is_comment            = args[:comments]
         comments_text         = args[:comments_text].to_s
-        _process_grid_rows_textbox(
+        _cleanup_orphan_grid_dropdown_answers(question)
+        _process_grid_rows_textbox(question, grid_rows_textbox)        
+        _process_grid_answers(
           question, 
-          grid_columns_textbox, grid_rows_textbox, 
-          is_exclusive,         omit_text, 
-          other,                other_text,
-          is_comment,           comments_text
-        )
+          grid_columns_textbox,
+          is_exclusive, omit_text, 
+          other, other_text,
+          is_comment, comments_text
+       )  
+      _restore_question_group(question) 
+      end      
+      
+      def _build_grid_dropdown(question,args)
+        is_exclusive          = args[:is_exclusive]
+        omit_text             = args[:omit_text].to_s
+        grid_columns_textbox  = args[:grid_columns_textbox]
+        grid_rows_textbox     = args[:grid_rows_textbox] 
+        other                 = args[:other]
+        other_text            = args[:other_text].to_s
+        is_comment            = args[:comments]
+        comments_text         = args[:comments_text].to_s
+        _process_grid_rows_textbox(question, grid_rows_textbox)
+        _process_grid_columns_textbox(
+          question, 
+          is_exclusive, omit_text, 
+          other, other_text,
+          is_comment, comments_text
+       ) 
+       _create_a_comment(question, is_comment, comments_text)
+      _restore_question_group(question)       
       end
 
       def _process_answers_textbox(question, args)
@@ -105,10 +128,7 @@ module SurveyorGui
    
       def _process_grid_rows_textbox(
         question, 
-        grid_columns_textbox, grid_rows_textbox, 
-        is_exclusive, omit_text, 
-        other, other_text,
-        is_comment, comments_text
+        grid_rows_textbox
        )
         #puts "processing grid rows \ntextbox grid?: #{_grid?(question)} \ntb: #{grid_rows_textbox} \ntb: #{grid_columns_textbox}\nthis: #{question.id}\ntext: #{question.text}"
         #puts 'got to inner if'
@@ -124,12 +144,32 @@ module SurveyorGui
           current_question = _create_a_question(question, display_order, new_text) 
           #puts "current question: #{current_question.text} #{current_question.question_group_id} saved? #{current_question.persisted?} id: #{current_question.id}"
         end
+      end
+      
+      def _process_grid_answers(
+        question, 
+        grid_columns_textbox,
+        is_exclusive, omit_text, 
+        other, other_text,
+        is_comment, comments_text,
+        column_id=nil
+       )        
         question.question_group.questions.each do |question|
-          _create_some_answers(question, grid_columns_textbox)
-          _create_an_other_answer(question, other, other_text)
+          _create_some_answers(question, grid_columns_textbox, column_id)
+          _create_an_other_answer(question, other, other_text, column_id)
           _create_an_omit_answer(question, is_exclusive, omit_text)
         end
-        _create_a_comment(question, is_comment, comments_text)
+        _create_a_comment(question, is_comment, comments_text) if id != :grid_dropdown
+      end
+      
+      def _cleanup_orphan_grid_dropdown_answers(question)
+        if question.question_group
+          question.question_group.questions.map{|q| q.answers.where('column_id NOT NULL').map{|a| a.destroy}}
+          question.question_group.columns.map{|c| c.destroy}
+        end
+      end
+      
+      def _restore_question_group(question)
         #work around for infernal :dependent=>:destroy on belongs_to :question_group from Surveyor
         #can't seem to override it and everytime a question is deleted, the whole group goes with it.
         #which makes it impossible to delete a question from a grid.
@@ -139,7 +179,25 @@ module SurveyorGui
           QuestionGroup.create!(question.question_group.attributes)
         end
       end
-        
+      
+      def _process_grid_columns_textbox(
+          question, 
+          is_exclusive,         omit_text, 
+          other,                other_text,
+          is_comment,           comments_text
+        )     
+        question.question_group.columns.each do |column|
+          _process_grid_answers(
+            question, 
+            column.answers_textbox,
+            is_exclusive, omit_text, 
+            other, other_text,
+            is_comment, comments_text,
+            column.id
+          )         
+        end
+      end
+      
       def _pick?
         !(pick=="none")
       end
@@ -148,16 +206,16 @@ module SurveyorGui
         [:grid_one, :grid_any, :grid_dropdown].include? self.id
       end
       
-      def _create_some_answers(current_question, grid_columns_textbox)       
+      def _create_some_answers(current_question, grid_columns_textbox, column_id)       
         if grid_columns_textbox.nil?
           grid_columns_textbox = " "
         end
         columns = TextBoxParser.new(
           textbox: grid_columns_textbox, 
-          records_to_update: current_question.answers
+          records_to_update: current_question.answers.where('column_id=? or column_id IS NULL',column_id)
         )
         columns.update_or_create_records do |display_order, text|
-          _create_an_answer(display_order, text, current_question) 
+          _create_an_answer(display_order, text, current_question, column_id: column_id) 
         end
         
       end
@@ -173,16 +231,16 @@ module SurveyorGui
         Answer.create!(params)
       end
       
-      def _create_an_other_answer(question, other, other_text)
+      def _create_an_other_answer(question, other, other_text, column_id=nil)
         if other
           display_order = question.answers.last.display_order+1
-          _create_an_answer(display_order, other_text, question, response_class: "string") 
+          _create_an_answer(display_order, other_text, question, response_class: "string", column_id: column_id) 
         end
       end
       
       def _create_an_omit_answer(question, is_exclusive, omit_text)
         if is_exclusive
-          display_order = question.answers.last.display_order+1
+          display_order = question.answers.size > 0 ? question.answers.last.display_order+1 : 0
           _create_an_answer(display_order, omit_text, question, is_exclusive: is_exclusive) 
         end
       end
@@ -246,7 +304,7 @@ module SurveyorGui
           [:file,           "File Upload"                                     , false,  :none, :file,     nil      ],
           [:grid_one,       "Grid (pick one)"                                 , true,   :one,  "default", :grid    ],
           [:grid_any,       "Grid (pick any)"                                 , true,   :any,  "default", :grid    ],
-          [:grid_dropdown,  "Group of Dropdowns"                              , true,   :one,  :dropdown, :grid    ],
+          [:grid_dropdown,  "Grid (dropdowns)"                                , true,   :one,  :dropdown, :grid    ],
           [:group_inline,   "Inline Question Group"                           , true,   nil,   nil,       :inline  ],
           #nothing below here shows up on the question builder choices for question type
           [:pick_one,       "Multiple Choice (only one answer)"               , true,   :one,  "default", :inline  ],

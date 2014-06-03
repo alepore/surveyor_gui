@@ -5,6 +5,7 @@ class QuestionsController < ApplicationController
     @title = "Add Question"
     survey_section = SurveySection.find(params[:survey_section_id])
     survey = Survey.find(survey_section.survey_id)
+    @question_group = QuestionGroup.new
     if params[:prev_question_id]
       prev_question = Question.find(params[:prev_question_id])
       @question = Question.new(:survey_section_id => params[:survey_section_id],
@@ -38,7 +39,6 @@ class QuestionsController < ApplicationController
     if !params[:question][:answers_attributes].blank? && !params[:question][:answers_attributes]['0'].blank?
       params[:question][:answers_attributes]['0'][:original_choice] = params[:question][:answers_attributes]['0'][:text]
     end
-
     @question = Question.new(question_params)
     if @question.save
       @question.answers.each_with_index {|a, index| a.destroy if index > 0} if @question.pick == 'none'
@@ -55,7 +55,7 @@ class QuestionsController < ApplicationController
     @question = Question.includes(:answers).find(params[:id])
     if @question.update_attributes(question_params)
       @question.answers.each_with_index {|a, index| a.destroy if index > 0} if @question.pick == 'none'
-      #load any page - if it has no flash errors, the colorbox that contains it will be closed immediately after the page loads
+      #load any page - if it has no flash errors, the colorbox that contains it will be closed immediately after the page loads      
       render :blank, :layout=>'colorbox'
     else
       render :action => 'edit', :layout=>'colorbox'
@@ -124,13 +124,30 @@ class QuestionsController < ApplicationController
       @questions = Question.find(params[:id])
     end
     if @questions.answers.empty?
-      @questions.answers.build(:text=>'')
+      @questions.answers.build(text: "", response_class: "answer")
     else
       if !@questions.answers.first.original_choice.blank?
         @questions.answers.first.update_attribute(:text,@questions.answers.first.original_choice)
       end
     end
-    render :partial => 'grid_fields'
+    if @questions.question_group
+      @question_group=@questions.question_group
+    else
+      @question_group=QuestionGroup.new
+    end
+    column_count = @question_group.columns.size
+    requested_columns = params[:index] == "NaN" ? column_count : params[:index].to_i
+    if requested_columns >= column_count
+      requested_columns = requested_columns - column_count
+      (requested_columns).times.each {@question_group.columns.build} 
+    else
+      @question_group.trim_columns (column_count-requested_columns)
+    end 
+    if params[:question_type_id] == "grid_dropdown"
+      render :partial => 'grid_dropdown_fields'
+    else
+      render :partial => 'grid_fields'
+    end
   end
 
   def render_no_picks_partial

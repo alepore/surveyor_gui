@@ -5,13 +5,15 @@ module SurveyorGui
 
       def self.included(base)
         base.send :attr_accessor, :dummy_answer, :type, :decimals
-        base.send :attr_writer, :answers_textbox, :grid_columns_textbox, :omit, :omit_text, :other, :other_text, :comments_text, :comments
+        base.send :attr_writer, :answers_textbox, :grid_columns_textbox, :omit, :omit_text,
+                  :other, :other_text, :comments_text, :comments, :dropdown_column_count
         base.send :attr_accessible, :dummy_answer, :question_type, :question_type_id, :survey_section_id, :question_group_id,
                   :text, :pick, :reference_identifier, :display_order, :display_type,
                   :is_mandatory,  :prefix, :suffix, :answers_attributes, :decimals, :dependency_attributes,
-                  :hide_label, :dummy_blob, :dynamically_generate, :answers_textbox,
+                  :hide_label, :dummy_blob, :dynamically_generate, :answers_textbox, :dropdown_column_count,
                   :grid_columns_textbox, :grid_rows_textbox, :omit_text, :omit, :other, :other_text, :is_comment, :comments, :comments_text,
-                  :dynamic_source, :modifiable, :report_code if defined? ActiveModel::MassAssignmentSecurity
+                  :dynamic_source, :modifiable, :report_code, :question_group_attributes if
+                  defined? ActiveModel::MassAssignmentSecurity
         base.send :accepts_nested_attributes_for, :answers, :reject_if => lambda { |a| a[:text].blank?}, :allow_destroy => true
         base.send :belongs_to, :survey_section
         base.send :has_many, :responses
@@ -20,6 +22,8 @@ module SurveyorGui
         base.send :scope, :by_display_order, -> {base.order('display_order')}
         ### everything below this point must be commented out to run the rake tasks.
         base.send :accepts_nested_attributes_for, :dependency, :reject_if => lambda { |d| d[:rule].blank?}, :allow_destroy => true
+        ### everything below this point must be commented out to run the rake tasks.
+
         base.send :mount_uploader, :dummy_blob, BlobUploader
         base.send :belongs_to, :question_type
 
@@ -302,6 +306,10 @@ module SurveyorGui
         end
       end
 
+      def dropdown_column_count
+        self.question_group ? self.question_group.columns.size : 1
+      end
+
       def grid_columns_textbox
         self.answers.where('response_class != ? and is_exclusive = ?',"string",false).order('display_order asc').collect(&:text).join("\n")
       end
@@ -314,6 +322,11 @@ module SurveyorGui
         end
       end
 
+      def question_group_attributes=(params)
+        question_group.update_attributes(params.except(:id))
+        @question_group_attributes=params
+      end
+
       def text=(txt)
         write_attribute(:text, txt)
         if part_of_group?
@@ -323,7 +336,7 @@ module SurveyorGui
       end
 
       def grid_rows_textbox=(textbox)
-        write_attribute(:text, textbox.match(/.*\r/).to_s.strip)
+        write_attribute(:text, textbox.match(/.*\r*/).to_s.strip)
         @grid_rows_textbox = textbox.gsub(/\r/,"")
       end
 

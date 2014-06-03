@@ -19,6 +19,11 @@ module SurveyorGui
       add_dummy_blob_to_questions
       add_dynamic_source_to_questions
       add_report_code_to_questions
+      add_is_comment_to_questions
+      add_is_comment_to_answers
+      create_rows
+      create_columns
+      add_column_id_to_answers
     )
 
     def migrations
