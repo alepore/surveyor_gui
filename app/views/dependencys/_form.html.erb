@@ -1,32 +1,20 @@
 <div class="shadebox">
     <h1 ><%= @title %></h1>
-    <%= simple_form_for @question, :url => dependencys_path+'/'+@question.id.to_s do |f| %>
-      <div class = 'dependency_editor'>
-        <%= f.error_messages %>
-        <%= f.hidden_field :survey_section_id %>
-        <%= f.simple_fields_for :dependency do |d| %>
-          <%= d.hidden_field :question_id %>
-          <%= d.hidden_field :question_group_id %>
-          <%= d.hidden_field :rule %>
-          <div>
-            Show the question, "<%= @this_question %>", when the following conditions are true:<br /><br />
-            <table>
-              <thead>
-                <tr>
-                  <td>Question</td><td>Condition</td><td>Answer</td>
-                </tr>
-              </thead>
-              <tbody id="dependency_conditions_partial" data-question_id="<%= f.object.id.to_s %>"></tbody>
-            </table>
-            <p class="floatdown2 add_condition">
-              Add a Condition <%= image_tag 'addicon.png', :border => 0 %>
-            </p>
-          </div>
-        <% end -%>
-        <br /><br />
-        <%= f.button :submit,  'Save Changes',  :id=>'dependency_submit' %>
-
-      </div>
-  <% end %>
+    <% if @question.part_of_group? -%>
+      <%= simple_form_for @question.question_group, :url => dependencys_path+'/'+@question.id.to_s do |g| %>
+        <%= g.error_messages %>
+        <div class = 'dependency_editor'>
+          <%= render "dependency", f: g %>
+        </div>
+      <% end %>
+    <% else -%>  
+      <%= simple_form_for @question, :url => dependencys_path+'/'+@question.id.to_s do |q| %>
+        <%= q.error_messages %>
+        <%= q.hidden_field :survey_section_id %>
+        <div class = 'dependency_editor'>
+          <%= render "dependency", f: q %>
+        </div>
+      <% end %>
+    <% end -%>
   <% 24.times.each do %><br/><% end -%>
 </div>
