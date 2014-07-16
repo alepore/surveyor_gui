@@ -97,7 +97,7 @@ module SurveyorGui
       @survey_section = Survey.find(survey_id).survey_sections.reorder('survey_sections.id').last
       if @survey_section
         @question_no = 0
-        render "_survey_section_fields" , :layout=> false
+        render "_survey_section_fields" , :layout => false
       else
         render :nothing=> true
       end
@@ -107,7 +107,7 @@ module SurveyorGui
       survey_section_id = params[:survey_section_id]
       @survey_section = SurveySection.find(survey_section_id)
       @question_no = 0
-      render "_survey_section_fields" , :layout=> false
+      render "_survey_section_fields" , :layout => false
     end
 
     def insert_new_question
@@ -115,7 +115,7 @@ module SurveyorGui
       @question = Question.find(question_id)
       @question_no = 0
       @surveyform = @question.survey_section.surveyform
-      render :new, :layout=>false
+      render :new, :layout =>false
     end
 
     def cut_section
@@ -124,7 +124,7 @@ module SurveyorGui
         @surveyform=ss.surveyform
         ss.update_attribute(:survey_id,nil)
         @question_no = 0
-        render :new, :layout=>false
+        render :new, :layout =>false
         return true
       end
       render :nothing=>true
@@ -170,7 +170,7 @@ module SurveyorGui
       if object.save
         surveyform.reload
         session[session_id]=nil
-        render :new, :layout=>false
+        render :new, :layout =>false
       else
         render :nothing=>true
         return false
@@ -184,7 +184,7 @@ module SurveyorGui
         q.update_attribute(:survey_section_id,nil)
         q.question_group.questions.map{|q| q.update_attribute(:survey_section_id,nil)} if q.part_of_group?
         @question_no = 0
-        render :new, :layout=>false
+        render :new, :layout =>false
         return true
       end
       render :nothing=>true
@@ -214,7 +214,7 @@ module SurveyorGui
         if @question.save
           @surveyform.reload
           session[:cut_question]=nil
-          render :new, :layout=>false
+          render :new, :layout =>false
         else
           render :nothing=>true
           return false
@@ -224,9 +224,14 @@ module SurveyorGui
 
     def replace_question
       question_id = params[:question_id]
-      @question = Question.find(question_id)
-      @question_no = 0
-      render "_question_section" , :layout=> false
+
+      begin
+        @question = Question.find(question_id)
+        @question_no = 0
+        render "_question_section" , :layout => false
+      rescue
+        render inline: "not found"
+      end
     end
 
     private
