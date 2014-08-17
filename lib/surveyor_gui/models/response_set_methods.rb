@@ -3,7 +3,6 @@ module SurveyorGui
     module ResponseSetMethods
 
       def self.included(base)
-        #has_many :users, :primary_key => :user_id, :foreign_key => :id
         base.send :has_many, :responses, :dependent=>:destroy
         base.send :attr_accessible, :survey, :responses_attributes, :user_id, :survey_id, :test_data if defined? ActiveModel::MassAssignmentSecurity
       end
@@ -26,6 +25,29 @@ module SurveyorGui
             {:show => arr[0].map{|d| d.question_group_id.nil? ? (d.question.is_mandatory? ? nil : "q_#{d.question_id}") : "g_#{d.question_group_id}"},
              :show_mandatory => arr[0].map{|d| d.question_group_id.nil? ? (d.question.is_mandatory? ? "q_#{d.question_id}" : nil) : "g_#{d.question_group_id}"},
              :hide => arr[1].map{|d| d.question_group_id.nil? ? "q_#{d.question_id}" : "g_#{d.question_group_id}"}}
+      end
+      def correctness_hash
+        { :questions => Survey.where(id: self.survey_id).includes(sections: :questions).first.sections.map(&:questions).flatten.compact.size,
+          :responses => responses.to_a.compact.size,
+          :correct => responses.find_all(&:correct?).compact.size
+        }
+      end
+
+      def report_user_name
+        user_name = nil
+        if class_exists?('ResponseSetUser')
+          user_name = ResponseSetUser.new(self.user_id).report_user_name
+        end
+        user_name || self.user_id || self.id
+      end
+      
+      private
+
+      def class_exists?(class_name)
+        klass = Module.const_get(class_name)
+        return klass.is_a?(Class)
+      rescue NameError
+        return false
       end
     end
   end

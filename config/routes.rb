@@ -7,8 +7,9 @@ Rails.application.routes.draw do
       get 'replace_survey_section'
       get 'insert_new_question'
       get 'replace_question'
-      get 'clone'
+      get 'clone_survey'
       put 'create_cloned'
+      patch 'create_cloned'
       get 'set_default'
       get 'cut_section'
       get 'paste_section'
@@ -46,24 +47,25 @@ Rails.application.routes.draw do
   end
   get '/dependency/render_dependency_conditions_partial', :to => 'dependencys#render_dependency_conditions_partial'
 
-  resources :surveyresponses,
-    :only=>['preview_results',
-            'preview_survey',
-            'preview_report',
-            'test',
-            'prepare_value_analysis_report',
-            'prepare_recommendation_report',
-            'show_recommendation_pdf',
-            'show_results' ] do
+  namespace :surveyor_gui do
+    resources :reports,
+      :only=>[
+              'show',
+              'preview',
+              'show_pdf'] do
+        member do
+          get 'show'
+          get 'preview'
+          get 'show_pdf'
+        end
+      end
+    resources :survey, only: ['show'] do
+    end
+    resources :responses, only: ['show', 'index', 'preview'] do
       member do
-        get 'preview_results'
-        get 'preview_survey'
-        get 'preview_report'
-        get 'test'
-        get 'prepare_recommendation_report'
-        get 'show_recommendation_pdf'
-        get 'show_results'
+        get 'preview'
       end
     end
+  end
 
 end

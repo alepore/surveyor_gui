@@ -5,10 +5,10 @@ module SurveyorGui
       include QuestionAndGroupSharedMethods
 
       def self.included(base)
-        base.send :attr_accessor, :dummy_answer, :type, :decimals
+        base.send :attr_accessor, :dummy_answer, :dummy_answer_array, :type, :decimals
         base.send :attr_writer, :grid_columns_textbox, :omit, :omit_text,
                   :other, :other_text, :comments_text, :comments, :dropdown_column_count
-        base.send :attr_accessible, :dummy_answer, :question_type, :question_type_id, :survey_section_id, :question_group_id,
+        base.send :attr_accessible, :dummy_answer, :dummy_answer_array, :question_type, :question_type_id, :survey_section_id, :question_group_id,
                   :text, :pick, :reference_identifier, :display_order, :display_type,
                   :is_mandatory,  :prefix, :suffix, :answers_attributes, :decimals, :dependency_attributes,
                   :hide_label, :dummy_blob, :dynamically_generate, :answers_textbox, :dropdown_column_count,
@@ -32,6 +32,9 @@ module SurveyorGui
         base.send :before_destroy, :no_responses
         base.send :after_save, :build_complex_questions
         base.send :before_save, :make_room_for_question
+
+        base.send :scope, :is_not_comment, -> { base.where(is_comment: false) }
+        base.send :scope, :is_comment, -> { base.where(is_comment: true) }
 
         base.class_eval do
 
@@ -138,6 +141,10 @@ module SurveyorGui
           prep_not_picks('float')
         when 'date'
           prep_not_picks('date')
+        when 'time'
+          prep_not_picks('time')
+        when 'datetime'
+          prep_not_picks('datetime')          
         when 'file'
           prep_not_picks('blob')
         when 'string'
@@ -156,7 +163,7 @@ module SurveyorGui
           response_class='answer'
         end
         if self.answers.blank?
-          self.answers_attributes={'0'=>{'response_class'=>response_class}}
+          self.answers_attributes={'0'=>{'text'=>'default', 'response_class'=>response_class}}
         else
           self.answers.map{|a|a.response_class=response_class}
         end
@@ -345,7 +352,7 @@ module SurveyorGui
 
       def text=(txt)
         write_attribute(:text, txt)
-        if part_of_group? && !question_group.display_type == "inline"
+        if part_of_group? && question_group.display_type != "inline"
           question_group.update_attributes(text: txt)
         end
         @text = txt
@@ -390,6 +397,10 @@ module SurveyorGui
         end
       end
 
+      def repeater?
+        part_of_group? ? (question_group.display_type=="repeater" ? true : false ) : false
+      end
+
       private
 
       def _update_group_id
@@ -406,7 +417,7 @@ module SurveyorGui
       end
 
       def _preceding_questions_numbered
-        _preceding_questions.delete_if{|p| !p.is_numbered?}
+        _preceding_questions.to_a.delete_if{|p| !p.is_numbered?}
       end
 
       def _preceding_questions

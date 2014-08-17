@@ -6,8 +6,8 @@ describe SurveyformsController do
 #    @routes = Surveyor::Engine.routes
 #  end
 
-  let!(:survey) { FactoryGirl.create(:survey, :id=> 1, :title => "Alphabet", :access_code => "alpha", :survey_version => 0)}
-  let!(:survey_beta) { FactoryGirl.create(:survey, :id => 2, :title => "Alphabet", :access_code => "alpha", :survey_version => 1)}
+  let!(:survey) { FactoryGirl.create(:survey, :title => "Alphabet", :access_code => "alpha", :survey_version => 0)}
+  let!(:survey_beta) { FactoryGirl.create(:survey, :title => "Alphabet", :access_code => "alpha", :survey_version => 1)}
   let!(:survey_with_no_responses) {FactoryGirl.create(:survey)}
   let!(:survey_with_responses) {FactoryGirl.create(:survey)}
   let!(:template) {FactoryGirl.create(:template)}
@@ -34,9 +34,9 @@ describe SurveyformsController do
 
     context "index parameters specify surveys" do
 
-      it "set the title to 'modify surveys'" do
+      it "set the title to 'manage surveys'" do
         do_get()
-        assigns(:title).should eq("Modify Surveys")
+        assigns(:title).should eq("Manage Surveys")
       end
 
       it "should not populate an array of templates" do
@@ -57,9 +57,9 @@ describe SurveyformsController do
 
     context "index parameters specify survey templates" do
 
-      it "set the title to 'modify templates'" do
+      it "set the title to 'manage templates'" do
         do_get(:template=>"true")
-        assigns(:title).should eq("Modify Templates")
+        assigns(:title).should eq("Manage Templates")
       end
 
       it "should populate an array of templates" do
@@ -154,7 +154,7 @@ describe SurveyformsController do
     context "the survey has no responses" do
 
       def do_get(params = {})
-        get :edit, {:id => 1}.merge(params)
+        get :edit, {:id => survey_with_no_responses.id}.merge(params)
       end
 
       it "renders edit" do
@@ -167,7 +167,7 @@ describe SurveyformsController do
     context "the survey has responses" do
 
       def do_get(params = {})
-        get :edit, {:id => 1}.merge(params)
+        get :edit, {:id => survey_with_responses.id}.merge(params)
       end
 
       it "still lets you see the edit page" do
@@ -190,7 +190,7 @@ describe SurveyformsController do
       end
 
       it "redirects to index" do
-        do_put(:id=>1,:surveyform=>{:id=>1})
+        do_put(:id=>survey.id,:surveyform=>{:id=>survey.id})
         expect(response).to redirect_to(surveyforms_url)
       end
 
@@ -203,12 +203,12 @@ describe SurveyformsController do
       end
 
       it "renders edit" do
-        do_put(:id=>1,:surveyform=>{:id=>1,:title=>''})
+        do_put(:id=>survey.id, :surveyform=>{:id=>survey.id,:title=>''})
         expect(response).to render_template('edit')
       end
 
       it "resets question_no to 0" do
-        do_put(:id=>1,:surveyform=>{:id=>1,:title=>''})
+        do_put(:id=>survey.id,:surveyform=>{:id=>survey.id,:title=>''})
         expect(assigns(:question_no)).to eq(0)
       end
 
@@ -219,7 +219,7 @@ describe SurveyformsController do
 
   context "#show" do
     def do_get
-      get :show, {:id => 1}
+      get :show, {:id => survey.id}
     end
 
     it "shows survey" do
@@ -231,7 +231,7 @@ describe SurveyformsController do
 
   context "#destroy" do
 
-    context "responses were submitted" do
+    context "no responses were submitted" do
       def do_delete
         delete :destroy, :id => survey_with_no_responses
       end
@@ -243,7 +243,7 @@ describe SurveyformsController do
       end
     end
 
-    context "no responses were submitted" do
+    context "responses were submitted" do
       def do_delete
         delete :destroy, :id => survey_with_responses
       end
@@ -253,6 +253,11 @@ describe SurveyformsController do
         expect(response).to redirect_to(surveyforms_url)
         expect(Survey.exists?(survey_with_responses.id)).to be_true
       end
+
+      it "displays a flash message warning responses were collected" do
+        do_delete
+        expect(flash[:error]).to have_content /not be deleted/i
+      end
     end
   end
 
@@ -260,7 +265,7 @@ describe SurveyformsController do
 
     def do_get(params = {})
       FactoryGirl.create(:survey_section, :survey => survey)
-      get :replace_form, {:id=>1,:survey_section_id=>1}.merge(params)
+      get :replace_form, {:id=>survey.id,:survey_section_id=>survey.sections.first.id}.merge(params)
     end
 
     it "resets question_no to 0" do
@@ -279,7 +284,7 @@ describe SurveyformsController do
   context "#insert_survey_section" do
     def do_get(params = {})
       survey.sections = [FactoryGirl.create(:survey_section, :survey => survey)]
-      get :insert_survey_section,{:id => 1}.merge(params)
+      get :insert_survey_section,{id: survey.id}.merge(params)
     end
     it "inserts a survey section" do
       do_get
@@ -292,7 +297,7 @@ describe SurveyformsController do
 
     def do_get(params = {})
       FactoryGirl.create(:survey_section, :survey => survey)
-      get :replace_survey_section, {:id=>1,:survey_section_id=>1}.merge(params)
+      get :replace_survey_section, {:id=>survey.id,:survey_section_id=>survey.sections.first.id}.merge(params)
     end
 
     it "resets question_no to 0" do
@@ -311,7 +316,7 @@ describe SurveyformsController do
     def do_get(params = {})
       survey.sections = [FactoryGirl.create(:survey_section, :survey => survey)]
       survey.sections.first.questions = [FactoryGirl.create(:question, :survey_section => survey.sections.first)]
-      get :insert_new_question,{:id => 1, :question_id => 1}.merge(params)
+      get :insert_new_question,{:id => survey.id, :question_id => survey.sections.first.questions.first.id}.merge(params)
     end
     it "inserts a question" do
       do_get
@@ -324,11 +329,33 @@ describe SurveyformsController do
     def do_get(params = {})
       survey.sections = [FactoryGirl.create(:survey_section, :survey => survey)]
       survey.sections.first.questions = [FactoryGirl.create(:question, :survey_section => survey.sections.first)]
-      get :cut_question,{:id => 1, :question_id => 1}.merge(params)
+      get :cut_question,{:id => survey.id, :question_id => survey.sections.first.questions.first.id}.merge(params)
     end
     it "cuts a question" do
       do_get
       expect(response).to be_success
+    end
+  end
+
+  context "#clone_survey" do
+    def do_put(params={})
+      survey.sections = [FactoryGirl.create(:survey_section, :survey => survey)]
+      survey.sections.first.questions = [FactoryGirl.create(:question, :survey_section => survey.sections.first, text: 'my cloned question')]
+      put :clone_survey,{id: survey.id}
+    end
+
+    it "creates a new survey" do
+      expect{do_put}.to change{Survey.count}.by(1)
+    end
+
+    it "gives a different id to the clone" do
+      do_put
+      expect(Survey.last.id).not_to eql survey.id
+    end
+
+    it "copies the text of the question" do
+      do_put
+      expect(Survey.last.survey_sections.first.questions.first.text).to eql 'my cloned question'
     end
   end
 end

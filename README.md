@@ -1,8 +1,6 @@
 surveyor_gui
 ============
 
-THE FIRST VERSION OF THIS GEM IS UNDER DEVELOPMENT!
-
 Surveyor_gui complements the surveyor gem.
 
 The surveyor gem is used to create surveys by parsing a file written in the Surveyor DSL.  It does not include a gui for creating surveys, although it does provide a gui for taking surveys.
@@ -20,7 +18,7 @@ This gem will also provide a reporting capability for Surveyor.
 SurveyorGui works with:
 
 * Ruby 1.9.3
-* Rails 4
+* Rails 4, 4.1
 
 
 Some key dependencies are:
@@ -38,9 +36,10 @@ A more exhaustive list can be found in the gemspecs for Surveyor [surveyor] and 
 
 ## Install
 
-Add surveyor-gui to your Gemfile:
+Add surveyor and surveyor-gui to your Gemfile:
 
-    gem 'surveyor_gui', git: 'git://github.com/kjayma/surveyor_gui.git'
+    gem 'surveyor', github: 'NUBIC/surveyor'
+    gem 'surveyor_gui'
 
 You will also need a javascript runtime, like node.js or therubyracer.  If you
 have not yet installed one, add
@@ -52,11 +51,9 @@ to your Gemfile.
 Bundle, install, and migrate:
 
     bundle install
-    rails g surveyor:install
-    rails g simple_form:install
     rails g surveyor_gui:install
-    bundle exec rake db:migrate
 
+Note that the installer will run db:migrate (so any un-applied migrations you have in your project will be pulled in).
 The survey editor can be found at '/surveyforms'.  Users can take surveys at the '/surveys' url.
 
 ## Limitations
@@ -80,6 +77,9 @@ Dependencies are partially supported.  The following are not currently supported
 - counts (count the number of answers checked or entered)
 - Regexp validations
 
+You can open the kitchen_sink survey that comes with Surveyor, but a few of the questions will not behave as expected
+because of the discrepancies noted above.
+
 ## Locking
 
 This gem enforces locking on surveys.  A survey may be modified up until a user submits a response.  At that point, the survey
@@ -90,20 +90,70 @@ data integrity of the survey response data.
 
 Surveys may be saved as templates.  This allows them to be cloned when creating a new survey (cloning is a pending feature).  It is
 possible to mark certain parts of a survey as unmodifiable so that they will always be present when a survey is cloned.
-
+  
 A template library feature is pending.
-
-## Dynamic Generation
-
-A pending feature that allows a list of answers to be dynamically generated from the database.  When creating a question, the survey creator
-enters a special code that specifies the table from which to draw the answers.
 
 ## Test environment
 
-If you want to try out surveyor-gui before incorporating it into an application, run
+If you want to try out surveyor-gui before incorporating it into an application, or contribute, clone the repository.
+Then run
 
     bundle install
     bundle exec rake gui_testbed
     cd testbed
 
 Start the rails server and go to /surveyforms
+
+Before contributing, please run the tests:
+    bundle exec rspec spec
+
+## Taking surveys
+
+Go to /surveys (or click the link at the bottom of the surveyforms home page) to see the surveys and take one.
+
+## Reports
+
+Surveyor_gui now provides reports!  
+
+You can see a report of all survey responses, or view an individual response.
+
+Highcharts.js is used for graphics, and must be licensed for commercial use.  Future development will replace Highcharts with Rickshawgraphs.
+
+To see reports, try using the "Preview Reports" button on the survey editor, or take the survey and try
+"localhost:3000/surveyor_gui/reports/:id/show" where :id is the survey id.  Preview reports will create some dummy
+responses using randomized answers.  
+
+You can also view an individual response at "localhost:3000/surveyor_gui/results/:id/show".
+
+## Devise etc.
+
+Surveyor_Gui will work with Devise or like gems.
+
+Surveyor_gui adds a user_id attribute to the Survey model.  It will try to set user_id to current_user when a new survey
+is defined.  The gem does not provide any access control over survey creation and update, but you can add that to your
+application using the user_id attribute.
+
+In addition, the underlying Surveyor gem provides a user_id attribute in the ResponseSet model.  When responses are created, it will
+try to set the user_id to current_user.
+
+Surveyor_gui reports assume there will be a unique user for eash Survey response, and reports on results by user.
+If the response set has a user id, (which will be the case if you've setup Devise in the typical way) it will identify the response by user_id.  If no user_id is available, it will
+default to the response_set.id.
+
+You may want to identify users by something other than id on reports.  This can be done easily.  
+
+Surveyor_gui creates a response_set_user.rb file in your app/models directory.  Edit it to define the identifier you would like to use for users in reports.  For instance, if your user model is User, and you would like to see the user's email address on reports, edit the file as follows...
+
+In the initialize method, add the following line:
+
+    @user = User.find(user_id)
+
+In the report_user_name method, add the following line:
+
+    @user ? @user.email : nil
+
+If you wanted the users full name, you could add something like this:
+
+    @user ? @user.last_name + ', ' + @user.first_name : nil
+
+Note that SurveyorGui controllers expect to use surveyor_gui's own layout view, surveyor_gui_default.rb.  A copy will be placed in your application's app/views/layouts directory.  You may need edit it for various reasons, such as adding a Devise login/logout link.

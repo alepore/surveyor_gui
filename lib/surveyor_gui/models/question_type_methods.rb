@@ -157,7 +157,7 @@ module SurveyorGui
         is_comment, comments_text,
         column_id=nil
        )
-        question.question_group.questions.each do |question|
+        question.question_group.questions.is_not_comment.each do |question|
           _create_some_answers(question, grid_columns_textbox, column_id)
           _create_an_other_answer(question, other, other_text, column_id)
           _create_an_omit_answer(question, is_exclusive, omit_text)
@@ -484,7 +484,7 @@ class TextBoxParser
   end
 
   def _dedupe
-    grouped = @nested_objects.order('display_order DESC').group(:text).collect(&:id)
+    grouped = @nested_objects.order('display_order DESC').uniq{|n| n.id}.collect(&:id)
     @nested_objects.each do |obj|
       obj.destroy unless (grouped.include? obj.id)
     end

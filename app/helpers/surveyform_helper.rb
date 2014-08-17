@@ -1,4 +1,5 @@
 module SurveyformHelper
+  require 'deep_cloneable'
 
   def list_dependencies(o)
     controlling_questions = o.controlling_questions
@@ -102,108 +103,56 @@ module SurveyformHelper
 
 end
 
-def clone_survey(template, as_template=false)
-  #the built-in clone method provided by Ruby on Rails gets us a clone of the Survey model, but does not clone the nested models. We have to do that ourselves.
-  s2 = template.dup
-  s2.user_id = current_user.id
-  question_table = {}
-  answer_table = {}
-  #build a clone by starting with the original survey template and traversing down through the nested template models of survey_section, question, answer, dependency, dependency condition.
-  #any model with a suffix of '2' indicates the cloned model.
-
-  #first, check if this is a Product Trial Questionnaire (PQ) and does not yet have mandatory EvaluationRx questions built in. If not, add them from the mandatory template before we add the
-  #questions from the user selected template.
-  if template.survey_type=='PQ'
-    lacks_mandatory_questions = !template.survey_sections.map{|ss| ss.questions.collect(&:modifiable)}.flatten.include?(false)
-    if lacks_mandatory_questions
-      mandatory_survey = Survey.find_by_survey_type('MERXPQ')
-      if mandatory_survey
-        mandatory_survey.survey_sections.each do |ss|
-          ss2 = s2.survey_sections.build(ss.attributes)
-          ss.questions.each do |q|
-            q2 = ss2.questions.build(q.attributes)
-            q.answers.each do |a|
-              a = q2.answers.build(a.attributes)
-              a.original_choice = a.text
-            end
-            if q.dependency
-              d2 = q2.build_dependency(q.dependency.attributes)
-              q.dependency.dependency_conditions.each do |dc|
-                #null dependency_id to avoid triggering validation on dup rules.
-                dc2 = d2.dependency_conditions.build(dc.attributes.merge(:dependency_id => nil))
-              end
-            end
-          end
-        end
-      end
-    end
+class SurveyCloneFactory
+  def initialize(id, as_template=false)
+    @survey = Surveyform.find(id.to_i)
+    @as_template = as_template
   end
 
-  template.survey_sections.each do |ss|
-    ss2 = s2.survey_sections.build(ss.attributes)
-    if lacks_mandatory_questions
-      # if we prepended mandatory questions, we need to add 1 to the display_order of all subsequent sections, so we don't have two sections with display_order=0
-      ss2.display_order = ss2.display_order+1
-    end
-    ss2.survey_id = nil
-    ss.questions.each do |q|
-      q2 = ss2.questions.build(q.attributes)
-      q.answers.each do |a|
-        a = q2.answers.build(a.attributes)
-        a.original_choice = a.text
-      end
-      if q.dependency
-        d2 = q2.build_dependency(q.dependency.attributes)
-        q.dependency.dependency_conditions.each do |dc|
-          #null dependency_id to avoid triggering validation on dup rules.
-          dc2 = d2.dependency_conditions.build(dc.attributes.merge(:dependency_id => nil))
-        end
-      end
+  def clone
+    cloned_survey = _deep_clone 
+    _set_api_keys(cloned_survey)
+    if cloned_survey.save!
+      return cloned_survey 
+    else
+      raise cloned_survey.errors.messages.map{|m| m}.join(',')
+      return nil
     end
   end
-  s2.template = as_template
-  s2.access_code = s2.title+Time.now.to_s
-  if s2.save
-    #if we leave the clone as is, the cloned dependency_condition object will have foreign keys pointing to the original templates, not the cloned objects.
-    #therefore the dependencies will act against the parent and not the clone. To correct this, we set up a cross reference by traversing the original models,
-    #and building a table indexed by the original ids which contains a hash of each corresponding new id.
+  
+  private
+  
+  def _initial_clone
+    initial_clone = @survey
+    initial_clone.api_id = Surveyor::Common.generate_api_id                                                       
+    initial_clone.survey_version = Survey.where(access_code: @survey.access_code).maximum(:survey_version) + 1  
+    return initial_clone
+  end 
 
-    #first do it for the mandatory questions, if applicable
-    if mandatory_survey
-      mandatory_survey.survey_sections.each_with_index do |ss, idx1|
-        ss.questions.each_with_index do |q, idx2|
-          question_table[q.id.to_s]={:new_id => s2.survey_sections[idx1].questions[idx2].id}
-          q.answers.each_with_index do |a, idx3|
-            answer_table[a.id.to_s]={:new_id => s2.survey_sections[idx1].questions[idx2].answers[idx3].id}
-          end
+  def _deep_clone
+    _initial_clone.deep_clone include: { 
+      sections:   
+        {
+          questions: [
+            :answers,
+            {dependency: :dependency_conditions},
+            {question_group: :columns}
+          ]
+        }
+    }, 
+    use_dictionary: true
+  end 
+
+  def _set_api_keys(cloned_survey)
+    cloned_survey.sections.each do |section|
+      section.questions.each do |question|
+        question.api_id = Surveyor::Common.generate_api_id
+        question.question_group.api_id = Surveyor::Common.generate_api_id if question.part_of_group?
+        question.answers.each do |answer|
+          answer.api_id = Surveyor::Common.generate_api_id
         end
       end
     end
-
-
-    template.survey_sections.each_with_index do |ss, idx1|
-      ss.questions.each_with_index do |q, idx2|
-        question_table[q.id.to_s]={:new_id => s2.survey_sections[idx1].questions[idx2].id}
-        q.answers.each_with_index do |a, idx3|
-          answer_table[a.id.to_s]={:new_id => s2.survey_sections[idx1].questions[idx2].answers[idx3].id}
-        end
-      end
-    end
-    #now we traverse the clone and reassign foreign keys in the dependency_condition object based on the cross reference table.
-    s2.survey_sections.each do |ss|
-      ss.questions.each do |q|
-        if q.dependency
-          q.dependency.dependency_conditions.each do |dc|
-            dc.question_id = question_table[dc.question_id.to_s][:new_id]
-            dc.answer_id = answer_table[dc.answer_id.to_s][:new_id]
-            dc.save!
-          end
-        end
-      end
-    end
-    return s2.id
-  else
-    return nil
   end
 end
 
@@ -214,6 +163,16 @@ class QuestionGroupTracker
     @counter = 0
     @question_group_id = question_group_id
     @question_group = QuestionGroup.find(question_group_id)
+  end
+
+  def check_for_new_group(question)
+    if question.question_group_id != @question_group_id || !defined?(@initial_check)
+      initialize(question.question_group_id)
+      @initial_check = true
+      return true
+    else
+      return false
+    end
   end
 end
 
